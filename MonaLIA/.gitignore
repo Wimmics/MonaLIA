@@ -1,0 +1,13 @@
+*.pth
+*.tar
+*.csv
+*.pt
+*.ttl
+*.pyc
+*.ini
+*.tsv
+*.html
+*.bak
+*.zip
+*checkpoint.ipynb
+*.log
