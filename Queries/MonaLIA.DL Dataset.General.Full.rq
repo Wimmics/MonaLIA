@@ -1,0 +1,72 @@
+#MonaLIA.DL Dataset Query General All.rq
+# replace first string placeholder with a list of categories so the query line reads like
+#    VALUES (?topCategory_label)  { ("être humain"@fr)    ("chien"@fr)  ("élément d'architecture"@fr) } .
+#
+# replace second string placeholder with a list of excluded categories so the query line reads like
+#			VALUES (?exceptionCategory_label)  { ("le corps humain"@fr)   } .
+# or for empty exclusion list
+#           VALUES (?exceptionCategory_label)  {  (""@fr)   } .
+
+
+prefix skos: <http://www.w3.org/2004/02/skos/core#> 
+prefix jcl: <http://jocondelab.iri-research.org/ns/jocondelab/>
+
+
+select (replace(group_concat(?topCategory_label; separator="+" ), "\\+$", "")  as ?label)
+          (sample(?noticeRepresentation) as ?repr)
+          (sample(?imagePath) as ?image_path)
+          (sample(?noticeReference) as ?ref)
+          (sum(?term_count) as ?term_count_count)
+          (count(?topCategory_label) - 1 as ?top_term_count ) 
+          #(sample(?art_forms) as ?art_form)
+          (replace(group_concat(?subcat;  separator="+"), "\\+$", "") as ?terms)
+          (sample(?noticeDomain) as ?domain)
+
+where
+{
+    {
+		select ?noticeReference ?topCategory_label (count(?noticeReference) as ?term_count) 
+		(group_concat(?subCategory_label;  separator="+") as ?subcat)
+		where { 
+
+		VALUES (?topCategory_label)  { %s } .
+
+			?topCategory a jcl:Term;
+				   skos:prefLabel ?topCategory_label;
+				   skos:narrower* | skos:related/skos:narrower* ?subCategory.
+				
+			?subCategory  skos:prefLabel ?subCategory_label.
+
+			?notice jcl:noticeReprTerm ?subCategory;
+					jcl:noticeHasImage true;               
+					jcl:noticeRef ?noticeReference.
+
+			FILTER ( ! EXISTS {
+				VALUES (?exceptionCategory_label)  {  %s   } .
+				?exceptionCategory  skos:prefLabel ?exceptionCategory_label;
+									skos:narrower* ?subCategory.
+			})	
+			
+		}
+		group by ?noticeReference ?topCategory_label
+		order by ?noticeReference ?topCategory_label
+	}
+    UNION
+	{
+		select ?noticeReference  ("" as ?topCategory_label) (0 AS ?term_count) ("" as ?subcat)
+		where {
+			?notice jcl:noticeHasImage true;               
+					jcl:noticeRef ?noticeReference.
+		}
+     }
+               
+    ?n  jcl:noticeRef ?noticeReference;
+        jcl:noticeImage [ jcl:noticeImageIsMain true ; jcl:noticeImagePath ?imagePath].
+  
+    optional{?n jcl:noticeRepr ?noticeRepresentation. }
+    optional {?n jcl:noticeDomn ?noticeDomain}
+
+    #filter (!BOUND(?noticeRepresentation))
+	  
+} 
+group by ?noticeReference

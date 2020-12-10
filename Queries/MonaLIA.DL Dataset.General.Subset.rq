@@ -1,0 +1,76 @@
+#MonaLIA.DL Dataset Query General.rq
+# replace first string placeholder with a list of categories so the query line reads like
+#    VALUES (?topCategory_label)  { ("être humain"@fr)    ("chien"@fr)  ("élément d'architecture"@fr) } .
+#
+# replace second string placeholder with a list of excluded categories so the query line reads like
+#			VALUES (?exceptionCategory_label)  { ("le corps humain"@fr)   } .
+# or for empty exclusion list
+#           VALUES (?exceptionCategory_label)  {  (""@fr)   } .
+# replace number placeholder with the number of joint classes per image desired + 1
+#    for ex.: 2 - disjoint classes, 3 - only images with two classes labels present and so on
+
+
+prefix skos: <http://www.w3.org/2004/02/skos/core#> 
+prefix jcl: <http://jocondelab.iri-research.org/ns/jocondelab/>
+
+
+select (group_concat(?topCategory_label; separator="+" ) as ?label)
+          (sample(?noticeRepresentation) as ?repr)
+          (sample(?imagePath) as ?image_path)
+          (sample(?noticeReference) as ?ref)
+          (sum(?term_count) as ?term_count_count)
+          (count(?topCategory_label) as ?top_term_count ) 
+          #(sample(?art_forms) as ?art_form)
+          (group_concat(?subcat;  separator="+") as ?terms)
+		  (sample(?noticeDomain) as ?domain)
+		  (str(sample(?genre_label)) as ?theme_label)
+where
+{
+	{
+	select ?noticeReference ?topCategory_label (count(?noticeReference) as ?term_count) 
+	(group_concat(?subCategory_label;  separator="+") as ?subcat)
+	where { 
+
+	VALUES (?topCategory_label)  { %s } .
+
+		?topCategory a jcl:Term;
+					skos:prefLabel ?topCategory_label;
+					skos:narrower* | skos:related/skos:narrower* ?subCategory.
+			
+		?subCategory  skos:prefLabel ?subCategory_label.
+		
+
+		?notice jcl:noticeReprTerm ?subCategory;
+		        jcl:noticeHasImage true;               
+		        jcl:noticeRef ?noticeReference.
+
+		FILTER ( ! EXISTS {
+			VALUES (?exceptionCategory_label)  { %s   } .
+			?exceptionCategory  skos:prefLabel ?exceptionCategory_label;
+								skos:narrower* ?subCategory.
+		})	
+		
+	}
+	group by ?noticeReference ?topCategory_label
+	order by ?noticeReference ?topCategory_label
+	}
+               
+	?n  jcl:noticeRef ?noticeReference;
+	    jcl:noticeRepr ?noticeRepresentation;
+	    jcl:noticeImage [ jcl:noticeImageIsMain true ; jcl:noticeImagePath ?imagePath].
+	optional {?n jcl:noticeDomn ?noticeDomain}
+	
+    optional {?n jcl:noticeReprTerm ?theme.
+              ?theme skos:broader*/skos:prefLabel "genre de la représentation"@fr;
+                     skos:prefLabel ?genre_label. 
+              filter (strstarts(?noticeRepresentation, str(?genre_label)))}
+
+     #        optional{?n1 jcl:noticeDomnTerm ?noticeDomnTerm.
+     #          	?noticeDomnTerm skos:prefLabel ?noticeArtForm.
+     #            	?noticeDomnTerm skos:broader+ ?domainParentTerm.
+     #            	?domainParentTerm skos:prefLabel "domaine par support de conservation"@fr.}
+	  
+} 
+group by ?noticeReference
+having  (?top_term_count < %d)
+#order by ?top_class
