@@ -4,5 +4,5 @@ This repository contains the supporting code for the MonaLIA project ran from 20
 
 The code is of prototype quality and supports the experiments conducted during the length of the project. It consists of MonaLIA application to run the PyTorch-based deep learning training written in Python and multiple Jupiter Notebooks for data analysis and visualization.
 
-To be able to run the application and Jupyter Notebooks a local copy of Jococnde dataset (RDF Knowledge Base and images) is required as well as CORESE or Apache Jena Fuzeki SPARQL engines to host the Knowledge Base and execute the SPARQL queries. Some queries require CORESE specifically. The dataset and SPARQL engines are not included into this repository.
+To be able to run the application and Jupyter Notebooks a local copy of Jococnde dataset (RDF Knowledge Base and images, maintained by French Ministry of Culture) is required as well as CORESE or Apache Jena Fuzeki SPARQL engines to host the Knowledge Base and execute the SPARQL queries. Some queries require CORESE specifically. The dataset and SPARQL engines are not included into this repository.
 
